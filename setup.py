@@ -9,17 +9,17 @@ with open("README.md", encoding="utf-8") as f:
     readme = f.read()
 
 setup(
-    name="",
-    packages=[""],
-    version="",
+    name="pycord-multicog",
+    packages=["pycord.multicog"],
+    version="1.0.0",
     license="MIT",
-    description="",
+    description="A pycord extension that allows splitting command groups into multiple cogs",
     long_description=readme,
     long_description_content_type="text/markdown",
-    author="",
-    url="",
-    keywords="",
-    install_requires=[""],
+    author="Dorukyum",
+    url="https://github.com/Dorukyum/pycord-multicog",
+    keywords="Pycord",
+    install_requires=["py-cord>=2.0.0"],
     classifiers=classifiers,
-    project_urls={"Source": ""},
+    project_urls={"Source": "https://github.com/Dorukyum/pycord-multicog"},
 )
