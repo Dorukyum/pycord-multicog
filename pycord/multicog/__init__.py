@@ -13,7 +13,7 @@ group_mapping: Dict[str, List[discord.SlashCommand]] = {}
 
 def add_to_group(name: str) -> Callable[[discord.SlashCommand], discord.SlashCommand]:
     """A decorator to add a slash command to a slash command group.
-    This will take effect and change the `cog`, `parent` and `guild_ids` attributes
+    This will take effect and change the `parent` and `guild_ids` attributes
     of the command when `apply_multicog` is ran.
     """
 
@@ -48,7 +48,15 @@ def apply_multicog(bot: discord.Bot) -> None:
             command.guild_ids = group.guild_ids
             bot._pending_application_commands.remove(command)
             command.parent = group
-            command.cog = group.cog
+            for cog in bot.cogs.values():
+                if (
+                    attr := getattr(cog, command.callback.__name__, None)
+                ) and attr.callback == command.callback:
+                    command.cog = cog
+                    break
+            else:
+                command.cog = group.cog
+                # fallback, will use the cog of the target group
             group.subcommands.append(command)
 
 

@@ -44,5 +44,3 @@ from pycord.multicog import Bot
 
 my_bot = Bot()  # will automatically apply multicog when commands are being synchronised
 ```
-
-Note that the `cog` attribute of the modified command (`subcommand2` in the example) will be set to the cog of the slash command group (`Cog1` instead of `Cog2`).
