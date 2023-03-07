@@ -3,7 +3,7 @@
 from typing import Callable, Dict, List, Optional
 
 import discord
-from discord.utils import copy_doc, find
+from discord.utils import copy_doc
 
 __all__ = ("add_to_group", "apply_multicog", "Bot")
 
@@ -31,17 +31,29 @@ def add_to_group(name: str) -> Callable[[discord.SlashCommand], discord.SlashCom
     return decorator
 
 
+def find_group(bot: discord.Bot, name: str) -> Optional[discord.SlashCommandGroup]:
+    """A helper function to find and return a (sub)group with the provided name."""
+
+    for command in bot._pending_application_commands:
+        if isinstance(command, discord.SlashCommandGroup):
+            if command.name == name:
+                return command
+
+            for subcommand in command.subcommands:
+                if (
+                    isinstance(subcommand, discord.SlashCommandGroup)
+                    and subcommand.name == name
+                ):
+                    return subcommand
+
+
 def apply_multicog(bot: discord.Bot) -> None:
     """A function to update the attributes of the pending commands which were
     used with `add_to_group`.
     """
 
     for group_name, pending_commands in group_mapping.items():
-        group = find(
-            lambda c: isinstance(c, discord.SlashCommandGroup) and c.name == group_name,
-            bot._pending_application_commands,
-        )
-        if group is None:
+        if (group := find_group(bot, group_name)) is None:
             raise RuntimeError(f"no slash command group named {group_name} found.")
 
         for command in pending_commands:
