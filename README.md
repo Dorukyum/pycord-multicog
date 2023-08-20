@@ -1,4 +1,7 @@
 # pycord-multicog
+[![Downloads](https://img.shields.io/pypi/dm/pycord-multicog?logo=pypi&logoColor=white)](https://pypi.org/project/pycord-multicog/)
+[![Discord](https://img.shields.io/discord/789829818547175446?label=discord&logo=discord&color=5865F2&logoColor=white)](https://discord.com/invite/8JsMVhBP4W)
+
 A pycord extension that allows splitting command groups into multiple cogs.
 
 ## Installation
