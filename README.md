@@ -30,7 +30,7 @@ class Cog1(Cog):
         await ctx.respond("This is a normal subcommand.")
 
 
-# cog number 2, has a command used with add_to_group
+# cog number 2, has commands decorated with @subcommand
 from pycord.multicog import subcommand
 
 class Cog2(Cog):
