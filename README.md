@@ -5,12 +5,21 @@
 A pycord extension that allows splitting command groups into multiple cogs.
 
 ## Installation
+Requires pycord v2.5 or higher.
+
 ```sh
 $ pip install pycord-multicog
 ```
 
 ## Usage
-### Creating cogs
+### Initialising bot
+```py
+from pycord.multicog import Bot
+
+bot = Bot(...)
+```
+
+### Creating commands
 ```py
 # cog number 1, a normal cog with a slash command group
 class Cog1(Cog):
@@ -22,28 +31,17 @@ class Cog1(Cog):
 
 
 # cog number 2, has a command used with add_to_group
-from pycord.multicog import add_to_group
+from pycord.multicog import subcommand
 
 class Cog2(Cog):
-    @add_to_group("group")  # the decorator that does the magic
+    @subcommand("group")  # this subcommand depends on the group defined in Cog1
     @slash_command()
     async def subcommand2(self, ctx):
         await ctx.respond("This subcommand is inside a different cog.")
+
+    @subcommand("group", independent=True)  # this subcommand is independent
+    @slash_command()
+    async def subcommand2(self, ctx):
+        await ctx.respond("This subcommand is also inside a different cog.")
 ```
 
-### Applying multicog using apply_multicog
-```py
-from pycord.multicog import apply_multicog
-
-my_bot.add_cog(Cog1())
-my_bot.add_cog(Cog2())
-...
-apply_multicog(my_bot)  # manually apply multicog after cogs are loaded
-```
-
-### Applying multicog using Bot subclass
-```py
-from pycord.multicog import Bot
-
-my_bot = Bot()  # will automatically apply multicog when commands are being synchronised
-```

@@ -1,87 +1,128 @@
 """A pycord extension that allows splitting command groups into multiple cogs."""
 
-from typing import Callable, Dict, List, Optional
+from collections import namedtuple
+from typing import Any, Callable, Dict, List, Optional
 
 import discord
-from discord.utils import copy_doc
+from discord.utils import get
 
-__all__ = ("add_to_group", "apply_multicog", "Bot")
+__all__ = ("subcommand", "Bot")
+
+MulticogMeta = namedtuple("MultiCogCommand", ["group", "independent", "group_options"])
+
+multicog_commands: List[discord.SlashCommand] = []
+multicog_metas: List[MulticogMeta] = []
 
 
-group_mapping: Dict[str, List[discord.SlashCommand]] = {}
-
-
-def add_to_group(name: str) -> Callable[[discord.SlashCommand], discord.SlashCommand]:
+def subcommand(
+    group: str,
+    *,
+    independent: bool = False,
+    group_options: Optional[Dict[str, Any]] = None,
+) -> Callable[[discord.SlashCommand], discord.SlashCommand]:
     """A decorator to add a slash command to a slash command group.
-    This will take effect and change the `parent` and `guild_ids` attributes
-    of the command when `apply_multicog` is ran.
+
+    Arguments
+    ---------
+    group: :class:`str`
+        The name of the group to attach the slash command to. If none found,
+        one will be created.
+    independent: :class:`bool`
+        Whether the command should stay available when the cog containing
+        the parent command group gets unloaded. Defaults to ``False``.
+    group_options: Optional[:class:`dict`]
+        The options to create the new slash command group with, if needed.
     """
 
     def decorator(command: discord.SlashCommand) -> discord.SlashCommand:
         if command.parent:
-            raise TypeError(f"command {command.name} is already in a group.")
+            raise TypeError(f"Command {command.name} is already in a group.")
 
-        try:
-            group_mapping[name].append(command)
-        except:
-            group_mapping[name] = [command]
+        multicog_commands.append(command)
+        meta = MulticogMeta(group=group, independent=independent, group_options=group_options)
+        multicog_metas.append(meta)
 
         return command
 
     return decorator
 
 
-def find_group(bot: discord.Bot, name: str) -> Optional[discord.SlashCommandGroup]:
-    """A helper function to find and return a (sub)group with the provided name."""
-
-    for command in bot._pending_application_commands:
-        if isinstance(command, discord.SlashCommandGroup):
-            if command.name == name:
-                return command
-
-            for subcommand in command.subcommands:
-                if (
-                    isinstance(subcommand, discord.SlashCommandGroup)
-                    and subcommand.name == name
-                ):
-                    return subcommand
-
-
-def apply_multicog(bot: discord.Bot) -> None:
-    """A function to update the attributes of the pending commands which were
-    used with `add_to_group`.
+class Bot(discord.Bot):
+    """A subclass of `discord.Bot` that supports splitting command groups
+    into multiple cogs.
     """
 
-    for group_name, pending_commands in group_mapping.items():
-        if (group := find_group(bot, group_name)) is None:
-            raise RuntimeError(f"no slash command group named {group_name} found.")
+    def _add_to_group(self, command: discord.SlashCommand, group: discord.SlashCommandGroup) -> None:
+        """A helper funcion to change attributes of a command to match those of the target group's."""
 
-        for command in pending_commands:
-            command.guild_ids = group.guild_ids
-            bot._pending_application_commands.remove(command)
-            command.parent = group
-            for cog in bot.cogs.values():
-                if (
-                    attr := getattr(cog, command.callback.__name__, None)
-                ) and attr.callback == command.callback:
-                    command.cog = cog
-                    break
-            else:
-                command.cog = group.cog
-                # fallback, will use the cog of the target group
-            group.subcommands.append(command)
+        index = multicog_commands.index(command)
+        command.cog, command.parent, command.guild_ids = group.cog, group, group.guild_ids
+        group.add_command(command)
+        multicog_commands[index] = command
 
+    def _find_group(self, name: str) -> Optional[discord.SlashCommandGroup]:
+        """A helper function to find and return a slash command group with the
+        provided name.
+        """
 
-class Bot(discord.Bot):
-    """A subclass of `discord.Bot` that calls `apply_multicog` when `sync_commands`
-    is ran with no arguments."""
+        if name.count(" ") == 0:
+            return get(self._pending_application_commands, name=name)
 
-    @copy_doc(discord.Bot.sync_commands)
-    async def sync_commands(
-        self,
-        commands: Optional[List[discord.ApplicationCommand]] = None,
-        **kwargs,
-    ) -> None:
-        if not commands:
-            apply_multicog(self)
-        await super().sync_commands(commands, **kwargs)
+        group_name, subgroup_name = name.split("")
+        if group := get(self._pending_application_commands, name=group_name):
+            return get(group.subcommand, name=subgroup_name)
+
+    def _get_meta(self, command: discord.SlashCommand) -> Optional[MulticogMeta]:
+        """A helper funcion to retrieve multicog meta information of a command."""
+        if command in multicog_commands:
+            return multicog_metas[multicog_commands.index(command)]
+
+    def add_application_command(self, command: discord.ApplicationCommand) -> None:
+        if isinstance(command, discord.SlashCommandGroup) and (
+            group := self._find_group(command.name)
+        ):
+            for subcommand in group.subcommands:
+                command.subcommands.append(subcommand)
+                subcommand.cog = group.cog
+
+            super().remove_application_command(group)
+
+        if not (
+            isinstance(command, discord.SlashCommand)
+            and (meta := self._get_meta(command))
+        ):
+            return super().add_application_command(command)
+
+        if group := self._find_group(meta.group):
+            return self._add_to_group(command, group)
+        elif meta.independent:
+            group = discord.SlashCommandGroup(meta.group, **meta.group_options or {})
+            group.cog = command.cog
+            self._add_to_group(command, group)
+            return super().add_application_command(group)
+
+        raise ValueError(
+            f"Command {command.name} is dependent yet group {meta.group} could "
+            "not be found. If you'd like to create a group when this command is "
+            "being added to the bot, set independent=True in the add_to_group decorator."
+        )
+
+    def remove_application_command(
+        self, command: discord.ApplicationCommand
+    ) -> Optional[discord.ApplicationCommand]:
+        if not isinstance(command, discord.SlashCommandGroup):
+            return super().remove_application_command(command)
+
+        for subcommand in command.subcommands.copy():
+            if (
+                not (isinstance(subcommand, discord.SlashCommand))
+                or not (meta := self._get_meta(subcommand))
+                or not meta.independent
+            ):
+                command.subcommands.remove(subcommand)
+
+        if command.subcommands:
+            command.cog = command.subcommands[0].cog
+            return
+
+        return super().remove_application_command(command)
