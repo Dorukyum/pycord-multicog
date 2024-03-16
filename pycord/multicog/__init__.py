@@ -68,9 +68,9 @@ class Bot(discord.Bot):
         if name.count(" ") == 0:
             return get(self._pending_application_commands, name=name)
 
-        group_name, subgroup_name = name.split("")
+        group_name, subgroup_name = name.split(" ")
         if group := get(self._pending_application_commands, name=group_name):
-            return get(group.subcommand, name=subgroup_name)
+            return get(group.subcommands, name=subgroup_name)
 
     def _get_meta(self, command: discord.SlashCommand) -> Optional[MulticogMeta]:
         """A helper funcion to retrieve multicog meta information of a command."""
