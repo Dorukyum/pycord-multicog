@@ -104,7 +104,7 @@ class Bot(discord.Bot):
         raise ValueError(
             f"Command {command.name} is dependent yet group {meta.group} could "
             "not be found. If you'd like to create a group when this command is "
-            "being added to the bot, set independent=True in the add_to_group decorator."
+            "being added to the bot, set independent=True in the subcommand decorator."
         )
 
     def remove_application_command(
