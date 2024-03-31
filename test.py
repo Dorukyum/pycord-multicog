@@ -25,7 +25,7 @@ def test_dependent():
         @subcommand("group")
         @discord.slash_command()
         async def test_command(self, ctx):
-            await ctx.respond(f"I am another dummy command.")
+            await ctx.respond("I am another dummy command.")
 
     bot.add_cog(FirstCog())
     bot.add_cog(SecondCog())
