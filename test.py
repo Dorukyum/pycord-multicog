@@ -67,3 +67,33 @@ def test_independent():
     assert test_command.name == "test_command"
     assert test_command.parent == group
 
+
+@run_test
+def test_subgroup():
+    bot = Bot()
+
+    class FirstCog(discord.Cog):
+        group = discord.SlashCommandGroup("group")
+        subgroup = group.create_subgroup("subgroup")
+
+        @subgroup.command()
+        async def dummy(self, ctx):
+            await ctx.respond("I am a dummy command.")
+
+    class SecondCog(discord.Cog):
+        @subcommand("group subgroup")
+        @discord.slash_command()
+        async def test_command(self, ctx):
+            await ctx.respond("I am another dummy command.")
+
+    bot.add_cog(FirstCog())
+    bot.add_cog(SecondCog())
+
+    group = bot.pending_application_commands[0]
+    assert isinstance(group, discord.SlashCommandGroup)
+    subgroup = group.subcommands[-1]
+    assert isinstance(subgroup, discord.SlashCommandGroup)
+    assert subgroup.name == "subgroup"
+    test_command = subgroup.subcommands[-1]
+    assert test_command.name == "test_command"
+    assert test_command.parent == subgroup
