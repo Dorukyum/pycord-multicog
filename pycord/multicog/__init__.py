@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional
 import discord
 from discord.utils import get
 
-__all__ = ("subcommand", "Bot")
+__all__ = ("subcommand", "Bot", "AutoShardedBot")
 
 MulticogMeta = namedtuple("MultiCogCommand", ["group", "independent", "group_options"])
 
@@ -126,3 +126,9 @@ class Bot(discord.Bot):
             return
 
         return super().remove_application_command(command)
+
+
+class AutoShardedBot(discord.AutoShardedBot, Bot):
+    """A subclass of `discord.AutoShardedBot` that supports splitting
+    command groups into multiple cogs.
+    """
