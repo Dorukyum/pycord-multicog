@@ -11,7 +11,7 @@ with open("README.md", encoding="utf-8") as f:
 setup(
     name="pycord-multicog",
     packages=["pycord.multicog"],
-    version="2.0.1",
+    version="2.1.0",
     license="MIT",
     description="A pycord extension that allows splitting command groups into multiple cogs",
     long_description=readme,
