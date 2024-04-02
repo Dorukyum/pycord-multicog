@@ -39,7 +39,9 @@ def subcommand(
             raise TypeError(f"Command {command.name} is already in a group.")
 
         multicog_commands.append(command)
-        meta = MulticogMeta(group=group, independent=independent, group_options=group_options)
+        meta = MulticogMeta(
+            group=group, independent=independent, group_options=group_options
+        )
         multicog_metas.append(meta)
 
         return command
@@ -52,11 +54,17 @@ class Bot(discord.Bot):
     into multiple cogs.
     """
 
-    def _add_to_group(self, command: discord.SlashCommand, group: discord.SlashCommandGroup) -> None:
+    def _add_to_group(
+        self, command: discord.SlashCommand, group: discord.SlashCommandGroup
+    ) -> None:
         """A helper funcion to change attributes of a command to match those of the target group's."""
 
         index = multicog_commands.index(command)
-        command.cog, command.parent, command.guild_ids = group.cog, group, group.guild_ids
+        command.cog, command.parent, command.guild_ids = (
+            group.cog,
+            group,
+            group.guild_ids,
+        )
         group.add_command(command)
         multicog_commands[index] = command
 
@@ -65,7 +73,7 @@ class Bot(discord.Bot):
         provided name.
         """
 
-        if name.count(" ") == 0:
+        if " " not in name:
             return get(self._pending_application_commands, name=name)
 
         group_name, subgroup_name = name.split(" ")
@@ -95,10 +103,20 @@ class Bot(discord.Bot):
 
         if group := self._find_group(meta.group):
             return self._add_to_group(command, group)
-        elif meta.independent:
-            group = discord.SlashCommandGroup(meta.group, **meta.group_options or {})
-            group.cog = command.cog
-            self._add_to_group(command, group)
+
+        if meta.independent:
+            options = meta.group_options or {}
+            if " " not in meta.group:
+                group = discord.SlashCommandGroup(meta.group, **options)
+                group.cog = command.cog
+                self._add_to_group(command, group)
+            else:
+                group_name, subgroup_name = meta.group.split(" ")
+                group = discord.SlashCommandGroup(group_name, **options)
+                group.cog = command.cog
+                subgroup = group.create_subgroup(subgroup_name)
+                self._add_to_group(command, subgroup)
+
             return super().add_application_command(group)
 
         raise ValueError(

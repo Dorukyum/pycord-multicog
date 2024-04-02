@@ -72,6 +72,15 @@ def test_independent():
 def test_subgroup():
     bot = Bot()
 
+    def check_tree(parent, subgroup_name: str, command_name: str):
+        assert isinstance(parent, discord.SlashCommandGroup)
+        subgroup = parent.subcommands[-1]
+        assert isinstance(subgroup, discord.SlashCommandGroup)
+        assert subgroup.name == subgroup_name
+        command = subgroup.subcommands[-1]
+        assert command.name == command_name
+        assert command.parent == subgroup
+
     class FirstCog(discord.Cog):
         group = discord.SlashCommandGroup("group")
         subgroup = group.create_subgroup("subgroup")
@@ -86,14 +95,15 @@ def test_subgroup():
         async def test_command(self, ctx):
             await ctx.respond("I am another dummy command.")
 
+        @subcommand("another_group another_subgroup", independent=True)
+        @discord.slash_command()
+        async def test_command_2(self, ctx):
+            await ctx.respond("I am yet another dummy command.")
+
     bot.add_cog(FirstCog())
     bot.add_cog(SecondCog())
 
     group = bot.pending_application_commands[0]
-    assert isinstance(group, discord.SlashCommandGroup)
-    subgroup = group.subcommands[-1]
-    assert isinstance(subgroup, discord.SlashCommandGroup)
-    assert subgroup.name == "subgroup"
-    test_command = subgroup.subcommands[-1]
-    assert test_command.name == "test_command"
-    assert test_command.parent == subgroup
+    check_tree(group, "subgroup", "test_command")
+    another_group = bot.pending_application_commands[-1]
+    check_tree(another_group, "another_subgroup", "test_command_2")
