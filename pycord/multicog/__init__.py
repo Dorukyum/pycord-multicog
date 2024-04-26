@@ -60,8 +60,7 @@ class Bot(discord.Bot):
         """A helper funcion to change attributes of a command to match those of the target group's."""
 
         index = multicog_commands.index(command)
-        command.cog, command.parent, command.guild_ids = (
-            group.cog,
+        command.parent, command.guild_ids = (
             group,
             group.guild_ids,
         )
@@ -91,7 +90,6 @@ class Bot(discord.Bot):
         ):
             for subcommand in group.subcommands:
                 command.subcommands.append(subcommand)
-                subcommand.cog = group.cog
 
             super().remove_application_command(group)
 
@@ -108,12 +106,10 @@ class Bot(discord.Bot):
             options = meta.group_options or {}
             if " " not in meta.group:
                 group = discord.SlashCommandGroup(meta.group, **options)
-                group.cog = command.cog
                 self._add_to_group(command, group)
             else:
                 group_name, subgroup_name = meta.group.split(" ")
                 group = discord.SlashCommandGroup(group_name, **options)
-                group.cog = command.cog
                 subgroup = group.create_subgroup(subgroup_name)
                 self._add_to_group(command, subgroup)
 
@@ -139,11 +135,8 @@ class Bot(discord.Bot):
             ):
                 command.subcommands.remove(subcommand)
 
-        if command.subcommands:
-            command.cog = command.subcommands[0].cog
-            return
-
-        return super().remove_application_command(command)
+        if not command.subcommands:
+            return super().remove_application_command(command)
 
 
 class AutoShardedBot(discord.AutoShardedBot, Bot):
