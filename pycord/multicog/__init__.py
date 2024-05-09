@@ -60,10 +60,8 @@ class Bot(discord.Bot):
         """A helper funcion to change attributes of a command to match those of the target group's."""
 
         index = multicog_commands.index(command)
-        command.parent, command.guild_ids = (
-            group,
-            group.guild_ids,
-        )
+        command.parent = group
+        command.guild_ids = group.guild_ids
         group.add_command(command)
         multicog_commands[index] = command
 
