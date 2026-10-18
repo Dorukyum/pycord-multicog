@@ -1,11 +1,18 @@
 import discord
+from traceback import print_exc
 
 from pycord.multicog import Bot, subcommand
 
 
 def run_test(func):
     if __name__ == "__main__":
-        func()
+        try:
+            func()
+        except Exception:
+            print(f"FAILED: {func.__name__}")
+            print_exc()
+        else:
+            print(f"passed: {func.__name__}")
 
     return func
 
