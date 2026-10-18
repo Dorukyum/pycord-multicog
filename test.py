@@ -114,3 +114,34 @@ def test_subgroup():
     check_tree(group, "subgroup", "test_command")
     another_group = bot.pending_application_commands[-1]
     check_tree(another_group, "another_subgroup", "test_command_2")
+
+
+@run_test
+def test_subgroup_unload():
+    bot = Bot()
+
+    class FirstCog(discord.Cog):
+        group = discord.SlashCommandGroup("group")
+        setup = group.create_subgroup("setup")
+
+        @setup.command()
+        async def dummy(self, ctx):
+            await ctx.respond("I am a dummy command.")
+
+    class SecondCog(discord.Cog):
+        @subcommand("group setup", independent=True)
+        @discord.slash_command()
+        async def test_command(self, ctx):
+            await ctx.respond("I am another dummy command.")
+
+    bot.add_cog(FirstCog())
+    bot.add_cog(SecondCog())
+
+    bot.remove_cog("FirstCog")
+
+    group = bot.pending_application_commands[0]
+    assert isinstance(group, discord.SlashCommandGroup)
+    setup = group.subcommands[0]
+    assert isinstance(setup, discord.SlashCommandGroup)
+    assert [c.name for c in setup.subcommands] == ["test_command"]
+    assert setup.subcommands[0].parent == setup

@@ -119,19 +119,26 @@ class Bot(discord.Bot):
             "being added to the bot, set independent=True in the subcommand decorator."
         )
 
+    def _prune_group(self, group: discord.SlashCommandGroup) -> None:
+        for subcommand in group.subcommands.copy():
+            if isinstance(subcommand, discord.SlashCommandGroup):
+                self._prune_group(subcommand)
+                if not subcommand.subcommands:
+                    group.subcommands.remove(subcommand)
+            elif not (
+                isinstance(subcommand, discord.SlashCommand)
+                and (meta := self._get_meta(subcommand))
+                and meta.independent
+            ):
+                group.subcommands.remove(subcommand)
+
     def remove_application_command(
         self, command: discord.ApplicationCommand
     ) -> Optional[discord.ApplicationCommand]:
         if not isinstance(command, discord.SlashCommandGroup):
             return super().remove_application_command(command)
 
-        for subcommand in command.subcommands.copy():
-            if (
-                not (isinstance(subcommand, discord.SlashCommand))
-                or not (meta := self._get_meta(subcommand))
-                or not meta.independent
-            ):
-                command.subcommands.remove(subcommand)
+        self._prune_group(command)
 
         if not command.subcommands:
             return super().remove_application_command(command)
