@@ -38,11 +38,13 @@ def subcommand(
         if command.parent:
             raise TypeError(f"Command {command.name} is already in a group.")
 
+        if group.count(" ") > 1:
+            raise ValueError(
+                f'Invalid group "{group}", subgroups can\'t have subgroups.'
+            )
+
         multicog_commands.append(command)
-        meta = MulticogMeta(
-            group=group, independent=independent, group_options=group_options
-        )
-        multicog_metas.append(meta)
+        multicog_metas.append(MulticogMeta(group, independent, group_options))
 
         return command
 
@@ -107,6 +109,12 @@ class Bot(discord.Bot):
                 self._add_to_group(command, group)
             else:
                 group_name, subgroup_name = meta.group.split(" ")
+
+                if existing := self._find_group(group_name):
+                    subgroup = existing.create_subgroup(subgroup_name)
+                    self._add_to_group(command, subgroup)
+                    return
+
                 group = discord.SlashCommandGroup(group_name, **options)
                 subgroup = group.create_subgroup(subgroup_name)
                 self._add_to_group(command, subgroup)
